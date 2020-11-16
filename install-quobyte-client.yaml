@@ -4,15 +4,15 @@
   become: yes
   tasks:
 
-    - name: Download Quobyte Software for id {{ repo_id }}
+    - name: Download Quobyte Software installer  
       get_url:
-        url: https://packages.quobyte.com/repo/3/{{ repo_id }}/install_quobyte
+        url: https://www.quobyte.com/install 
         dest: ~/install_quobyte
         mode: '0755'
 
     - name: Install Quobyte client
       shell:
-        cmd: ~/install_quobyte add-client --repo-id {{ repo_id }} --registry-endpoints {{ registry }} --mount-point {{ mountpoint }}
+        cmd: ~/install_quobyte add-client --registry-endpoints {{ registry }} --mount-point {{ mountpoint }}
 
     - name: Install Epel Centos
       yum:

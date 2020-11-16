@@ -1,24 +1,35 @@
 ---
-- hosts: cluster
+## - hosts: cluster
+- hosts: all
+  any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
   become: yes
   tasks:
 
-    - name: Download Quobyte Software for id {{ repo_id }}
+    - name: Download Quobyte Software installer
       get_url:
-        url: https://packages.quobyte.com/repo/3/{{ repo_id }}/install_quobyte
+        url: https://www.quobyte.com/install 
         dest: ~/install_quobyte
         mode: '0755'
       tags: packages
-
+      
     - name: Prevent STUPID Postfix popup
       replace:
         path: ~/install_quobyte
         regexp: 'sudo dpkg-reconfigure --unseen-only postfix'
-        replace: ''
+        replace: '## sudo dpkg-reconfigure --unseen-only postfix'
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
       tags: packages
+
+    - name: force install script to be really non-interactive
+      replace:
+        path: ~/install_quobyte
+        regexp: 'read -n 1 RESPONSE'
+        replace: 'return 1'
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+      tags: packages
+
 
     - name: Install Epel Centos
       yum:
@@ -37,7 +48,6 @@
         packages:
         - java-11-openjdk
         - chrony
-        - atop
         - htop
         - numactl
         - numad
@@ -51,19 +61,19 @@
       apt:
         name: "{{ packages }}"
         state: present
+        update_cache: yes
       vars:
         packages:
         - openjdk-11-jre-headless
         - chrony
-        - atop
         - htop
         - numactl
         - numad
         - netdata
         - irqbalance
         - tuned
-        - postfix
         - xfsprogs
+        - ntpstat
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
       tags: packages
 
@@ -196,6 +206,22 @@
         enabled: yes
       tags: tune
 
+    - name: ensure write buffer sizes
+      sysctl:
+         name: net.core.wmem_max
+         value: '1048576'
+         sysctl_set: yes
+         state: present
+         reload: yes
+
+    - name: ensure read buffer sizes
+      sysctl:
+         name: net.core.rmem_max
+         value: '67108864'
+         sysctl_set: yes
+         state: present
+         reload: yes
+
     - name: Create a list of all devices
       shell:
         cmd: lsblk -dn -o NAME,TYPE |grep disk |awk '{print $1}'
@@ -253,6 +279,7 @@
       tags: devices
 
 - hosts: cluster[0]
+  any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
   become: yes
@@ -260,11 +287,13 @@
   tasks:
 
     - name: Install Quobyte bootstrap
+      ignore_errors: yes
       shell:
-        cmd: ~/install_quobyte bootstrap --repo-id {{ repo_id }} --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
+        cmd: ~/install_quobyte bootstrap --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
       tags: bootstrap
 
-- hosts: cluster[1:4],!cluster[0]
+- hosts: cluster[1:3],!cluster[0]
+  any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
   become: yes
@@ -272,11 +301,13 @@
   tasks:
 
     - name: Add additional Quobyte registry nodes
+      ignore_errors: yes
       shell:
-        cmd: ~/install_quobyte add --repo-id {{ repo_id }} --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
+        cmd: ~/install_quobyte add --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
       tags: add_regnodes
 
-- hosts: cluster,!cluster[0:4]
+- hosts: cluster,!cluster[0:3]
+  any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
   become: yes
@@ -284,26 +315,23 @@
   tasks:
 
     - name: Add additional Quobyte cluster nodes
+      ignore_errors: yes
       shell:
-        cmd: ~/install_quobyte add --repo-id {{ repo_id }} --services data,metadata,api,webconsole --registry-endpoints {{ registry }}
+        cmd: ~/install_quobyte add --services data,metadata,api,webconsole --registry-endpoints {{ registry }}
       tags: add_stdnodes
 
 - hosts: cluster
+  any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
   become: yes
   gather_facts: yes
   tasks:
 
-#    - name: Copy Quobyte memory config
-#      copy:
-#         src: templates/quobyte-mem
-#         dest: /etc/default/quobyte
-#      tags: tune
-
     - name: Install Quobyte client
+      ignore_errors: yes
       shell:
-        cmd: ~/install_quobyte add-client --repo-id {{ repo_id }} --registry-endpoints {{ registry }} --mount-point {{ mountpoint }}
+        cmd: ~/install_quobyte add-client --registry-endpoints {{ registry }} --mount-point {{ mountpoint }}
       tags: client
 
     - name: Configure quobyte client configuration
@@ -312,7 +340,7 @@
         block: |
           options=default_permissions
           disable-xattrs
-          features=fast_read
+          ## features=fast_read
           sequential_window_max_prefetch_horizon=200
           multiclient_nr_clients=4
       tags: tune
@@ -328,51 +356,19 @@
         cmd: tuned-adm profile quobyte-server-performance
       tags: tune
 
-    - name: Select the Metadata disk based on mddisksize
-      shell:
-        cmd: lsblk -o name,label,size |grep quobyte-dev |grep {{ mddisksize }} |awk 'NR==1{print $1}'
-      register: list_m
-      tags: devices
-
-    - set_fact: flist_m="{{ list_m.stdout_lines }}"
-      tags: devices
-
-    - debug: var=list_m.stdout_lines
-
     - name: Create metadata disk
-      shell: qmkdev -t M /var/lib/quobyte/mnt/inspector-{{ item }}
-      with_items:
-        - "{{ flist_m }}"
+      ignore_errors: yes
+      shell: qmkdev -t M /var/lib/quobyte/mnt/inspector-{{ metadatadevice }}
       tags: devices
-
-    - set_fact:
-        flist_d: "{{ flist_empty | difference (flist_m) }}"
-      tags: devices
-
-    - debug: var=flist_d
 
     - name: Create Quobyte Data devices
-      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
-      with_items:
-        - "{{ flist_d }}"
-      register: _create_data_devices
-      async: 1200
-      poll: 0
+      ignore_errors: yes
+      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ datadevice }}
       tags: devices
 
-    - debug: var=flist_d
-
-    - name: Wait for creation to finish
-      async_status:
-        jid: "{{ item.ansible_job_id }}"
-      register: _jobs3
-      until: _jobs3.finished
-      delay: 5
-      retries: 1000
-      with_items: "{{ _create_data_devices.results }}"
-      tags: devices
 
 - hosts: cluster
+  any_errors_fatal: false
   vars_files:
   - vars/quobyte.yaml
   become: yes
@@ -432,7 +428,44 @@
         search_regex: "API service is now ready"
       tags: services
 
+- hosts: cluster
+  any_errors_fatal: false
+  become: yes
+  gather_facts: no
+  tasks:
+
+    - name: Start quobyte-s3
+      service:
+        name: quobyte-s3
+        state: restarted
+        enabled: yes
+      tags: services
+
+- hosts: dataserver
+  any_errors_fatal: false
+  vars_files:
+    - vars/quobyte.yaml
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Add additional Quobyte dataservice nodes
+      ignore_errors: yes
+      shell:
+        cmd: ~/install_quobyte add --services data --registry-endpoints {{ registry }}
+      tags: add_datanodes
+
+    - name: Create Quobyte Data devices 1
+      ignore_errors: yes
+      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-sdb
+      tags: devices
+
+    - name: Create Quobyte Data devices 2
+      ignore_errors: yes
+      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-sdc
+      tags: devices
+
 - hosts: cluster[0]
+  any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
   become: yes
@@ -457,117 +490,16 @@
         replace: '{{ s3_endpoint }}'
       tags: system
 
+    - replace:
+        path: /tmp/system.config
+        regexp: '__CLUSTERNAME__'
+        replace: '{{ clustername }}'
+      tags: system
+
+
     - name: Import system configuration
       shell:
         cmd: /usr/bin/qmgmt systemconfig import /tmp/system.config
       tags: system
 
-- hosts: cluster
-  become: yes
-  gather_facts: no
-  tasks:
 
-    - name: Start quobyte-s3
-      service:
-        name: quobyte-s3
-        state: restarted
-        enabled: yes
-      tags: services
-
-- hosts: cluster[0]
-  vars_files:
-    - vars/quobyte.yaml
-  become: yes
-  gather_facts: no
-  tasks:
-
-    - name: Copy default volume configuration
-      copy:
-         src: templates/
-         dest: /tmp/
-      tags: system
-
-    - name: Import rf1 volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import Single-replica /tmp/Single-replica.cfg
-      tags: system
-
-    - name: Import rf3 volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import Default-replicated /tmp/Default-replicated.cfg
-      tags: system
-
-    - name: Import ec2+1 volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import EC-2plus1 /tmp/EC-2plus1.cfg
-      tags: system
-
-    - name: Import ec2+1-small volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import EC-2plus1-small /tmp/EC-2plus1-small.cfg
-      tags: system
-
-    - name: Import ec4+2 volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import EC-4plus2 /tmp/EC-4plus2.cfg
-      tags: system
-
-    - name: Import ec4+2-small volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import EC-4plus2-small /tmp/EC-4plus2-small.cfg
-      tags: system
-
-    - name: Import ec8+2 volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import EC-8plus2 /tmp/EC-8plus2.cfg
-      tags: system
-
-    - name: Import ec8+2-small volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import EC-8plus2-small /tmp/EC-8plus2-small.cfg
-      tags: system
-
-    - name: Import s3 volume configuration
-      shell:
-        cmd: /usr/bin/qmgmt volume config import S3-objects /tmp/S3-objects.cfg
-      tags: system
-
-#    - name: Create default rf1 volume
-#      shell:
-#        cmd: /usr/bin/qmgmt volume create vol0-rf1 root root Single-replica
-#      tags: volume
-
-    - name: Create default rf3 volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-rf3 root root Default-replicated
-      tags: volume
-
-    - name: Create default ec2+1 volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-ec21 root root EC-2plus1
-      tags: volume
-
-    - name: Create default ec2+1-small volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-ec21-small root root EC-2plus1-small
-      tags: volume
-
-    - name: Create default ec4+2 volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-ec42 root root EC-4plus2
-      tags: volume
-
-    - name: Create default ec4+2-small volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-ec42-small root root EC-4plus2-small
-      tags: volume
-
-    - name: Create default ec8+2 volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-ec82 root root EC-8plus2
-      tags: volume
-
-    - name: Create default ec8+2-small volume
-      shell:
-        cmd: /usr/bin/qmgmt volume create vol0-ec82-small root root EC-8plus2-small
-      tags: volume
