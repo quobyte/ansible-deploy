@@ -26,10 +26,12 @@ Preparation:
    Please use 'wipefs -av' to clean repurposed devices
 
 2) Edit the inventory file
+
  a) In section [cluster] put the cluster nodes by name or ip (one per line)
  b) In section [clients] put all Client Nodes by name (one per line) (Cluster nodes already have the client installed)
 
 3) Edit vars/quobyte.yaml
+
    Set the variables to a meaningful value for your environment
  a) registry: The DNS CNAME or A record (or IP-Addresses) for service discovery (example: registry.quobyte.local) for the first nodes of the cluster.
  b) metadatadevice / datadevice: Choose, which device will be a dedicated metadata device and which will serve as data device.
@@ -37,18 +39,26 @@ Preparation:
  d) network: Specify the preffered network for traffic, usually this is the physical or logical interface with the most bandwidth
  e) s3_endpoint: dns name for s3 usage
 
-4) Start Quobyte server installation
-   Within the quobyte-ansible directory run the following command on the Ansible management node or the Bootstrap node of the Quobyte cluster
-   ansible-playbook -i inventory install-quobyte-server.yaml
+4) Start Quobyte server installation.
 
-5) Start Quobyte client installation
    Within the quobyte-ansible directory run the following command on the Ansible management node or the Bootstrap node of the Quobyte cluster
+   ```
+   $ ansible-playbook -i inventory install-quobyte-server.yaml
+   ```
+
+5) (Optional) Start Quobyte client installation
+
+   Within the quobyte-ansible directory run the following command on the Ansible management node or the Bootstrap node of the Quobyte cluster
+   ```
    ansible-playbook -i inventory install-quobyte-client.yaml
+   ```
 
 6) (Optional) Cleanup Quobyte server installation
+
    Within the quobyte-ansible directory run the following command on the Ansible management node or the Bootstrap node of the Quobyte cluster
    ansible-playbook -i inventory clean-quobyte-server.yaml
 
 7) (Optional) Cleanup Quobyte client installation
+
    Within the quobyte-ansible directory run the following command on the Ansible management node or the Bootstrap node of the Quobyte cluster
    ansible-playbook -i inventory clean-quobyte-client.yaml
