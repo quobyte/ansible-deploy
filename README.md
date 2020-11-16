@@ -30,7 +30,7 @@ Preparation:
  a) In section [cluster] put the cluster nodes by name or ip (one per line)
  b) In section [clients] put all Client Nodes by name (one per line) (Cluster nodes already have the client installed)
 
-3) Edit vars/quobyte.yaml
+3) Edit ``` vars/quobyte.yaml ```
 
    Set the variables to a meaningful value for your environment
  a) registry: The DNS CNAME or A record (or IP-Addresses) for service discovery (example: registry.quobyte.local) for the first nodes of the cluster.
@@ -50,7 +50,7 @@ Preparation:
 
    Within the quobyte-ansible directory run the following command on the Ansible management node or the Bootstrap node of the Quobyte cluster
    ```
-   ansible-playbook -i inventory install-quobyte-client.yaml
+   $ ansible-playbook -i inventory install-quobyte-client.yaml
    ```
 
 6) (Optional) Cleanup Quobyte server installation
