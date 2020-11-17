@@ -433,6 +433,13 @@
   become: yes
   gather_facts: no
   tasks:
+    - name: Create S3 R/W directory
+      file:
+        path: /var/lib/quobyte/.quobyte
+        state: directory
+        owner: quobyte
+        group: quobyte
+        mode: 0775
 
     - name: Start quobyte-s3
       service:
