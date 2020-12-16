@@ -6,7 +6,7 @@
 #registry: registry.quobyte.local # <--- requirement for production use
 #
 # When there is no DNS server availible the IP addresses of the first 5 (or 4) nodes in the inventory file can be used for the registry service
-registry: 10.138.15.226,10.138.15.227,10.138.15.225,10.138.15.231
+registry: 10.138.15.226,10.138.15.227,10.138.15.225
 #
 # The S3 endpoint is the DNS name used for accessing the S3 API
 # It is recommended that the S3 endpoint resolves to a load balancer and the loadbalancer forwards the traffic to the quobyte storage nodes
