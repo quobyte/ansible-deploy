@@ -89,7 +89,7 @@
         path: "{{ item }}"
         state: absent
       with_items:
-        - /etc/apt/sources.list.d/quobyte*
+        - /etc/apt/sources.list.d/quobyte.list
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
     - name: Clean directories
       file:
@@ -98,6 +98,7 @@
       with_items:
         - /var/lib/quobyte*
         - ~/.quobyte
+        - /quobyte
         - ~/install_quobyte
         - /opt/quobyte*
         - /usr/lib/systemd/system/quobyte*
