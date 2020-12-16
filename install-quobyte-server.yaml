@@ -307,7 +307,7 @@
         cmd: ~/install_quobyte add --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
       tags: add_regnodes
 
-- hosts: cluster,!cluster[1:2]
+- hosts: cluster,!cluster[0:2]
   any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
@@ -334,17 +334,6 @@
       shell:
         cmd: ~/install_quobyte add-client --registry-endpoints {{ registry }} --mount-point {{ mountpoint }}
       tags: client
-
-#    - name: Configure quobyte client configuration
-#      blockinfile:
-#        path: /etc/quobyte/client-service.cfg
-#        block: |
-#          options=default_permissions
-#          ## disable-xattrs
-#          ## features=fast_read
-#          sequential_window_max_prefetch_horizon=200
-#          multiclient_nr_clients=4
-#      tags: tune
 
     - name: Copy updated Quobyte tuned config
       copy:
