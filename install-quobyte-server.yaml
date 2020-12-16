@@ -364,7 +364,7 @@
     - set_fact: flist_m="{{ metadatadevice }}"
       tags: devices
 
-    - debug: var=flist_m.stdout_lines
+    - debug: var=flist_m
 
     - name: Create metadata disk
       shell: qmkdev -t M /var/lib/quobyte/mnt/inspector-{{ item }}
