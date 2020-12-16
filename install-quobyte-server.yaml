@@ -113,6 +113,7 @@
         state: stopped
         enabled: no
       ignore_errors: yes
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
     - name: Disable SE Linux
       shell:
