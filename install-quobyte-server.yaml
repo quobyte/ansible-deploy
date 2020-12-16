@@ -345,22 +345,6 @@
         cmd: tuned-adm profile quobyte-server-performance
       tags: tune
 
-#    - name: Create metadata disk
-#      ignore_errors: yes
-#      shell: qmkdev -t M /var/lib/quobyte/mnt/inspector-{{ metadatadevice }}
-#      tags: devices
-
-#    - name: Create Quobyte Data devices
-#      ignore_errors: yes
-#      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ datadevice }}
-#      tags: devices
-
-#    - name: Select the Metadata disk based on mddisksize
-#      shell:
-#        cmd: lsblk -o name,label,size |grep quobyte-dev |grep {{ mddisksize }} |awk 'NR==1{print $1}'
-#      register: list_m
-#      tags: devices
-
     - set_fact: flist_m="{{ metadatadevice }}"
       tags: devices
 

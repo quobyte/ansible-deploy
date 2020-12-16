@@ -22,5 +22,4 @@ mountpoint: /quobyte
 # With this playbook version you decide per device name (e.g. sdb/sdc/...) 
 # which device will do which job. 
 metadatadevice: sdb
-datadevice: sdc
 clustername: quobyte-cluster 
