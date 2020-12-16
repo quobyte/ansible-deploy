@@ -84,6 +84,13 @@
         enabled: no
       ignore_errors: yes
 
+    - name: Clean Debian sources.list
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/apt/sources.list.d/quobyte*
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
     - name: Clean directories
       file:
         path: "{{ item }}"
@@ -91,6 +98,7 @@
       with_items:
         - /var/lib/quobyte*
         - ~/.quobyte
+        - ~/install_quobyte
         - /opt/quobyte*
         - /usr/lib/systemd/system/quobyte*
         - /usr/bin/*quobyte*
