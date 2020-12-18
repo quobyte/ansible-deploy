@@ -270,7 +270,7 @@
       register: _quobyte_labeled
       tags: devices
 
-    - set_fact: f_quobyte_labeled="{{ _quobyte_labeled.stdout_lines }}"
+    - set_fact: f_quobyte_labeled={{ _quobyte_labeled.stdout_lines }}
       tags: devices
     - name: Check number of devices
       shell:
@@ -345,7 +345,7 @@
         cmd: tuned-adm profile quobyte-server-performance
       tags: tune
 
-    - set_fact: flist_m="{{ metadatadevice }}"
+    - set_fact: flist_m={{ metadatadevice }}
       tags: devices
 
     - debug: var=flist_m
@@ -354,7 +354,7 @@
       shell: qmkdev -t M /var/lib/quobyte/mnt/inspector-{{ item }}
       with_items:
         - "{{ flist_m }}"
-      tags: devices
+      tags: devices,bootstrap
 
     - set_fact:
         flist_d: "{{ flist_empty | difference (flist_m) }}"
@@ -376,8 +376,8 @@
     - name: Wait for creation to finish
       async_status:
         jid: "{{ item.ansible_job_id }}"
-      register: _jobs3
-      until: _jobs3.finished
+      register: _jobs2
+      until: _jobs2.finished
       delay: 5
       retries: 1000
       with_items: "{{ _create_data_devices.results }}"
@@ -478,16 +478,32 @@
         cmd: ~/install_quobyte add --services data --registry-endpoints {{ registry }}
       tags: add_datanodes
 
-    - name: Create Quobyte Data devices 1
-      ignore_errors: yes
-      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-sdb
+
+    - set_fact:
+        flist_d: "{{ flist_empty }}"
       tags: devices
 
-    - name: Create Quobyte Data devices 2
-      ignore_errors: yes
-      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-sdc
+    - debug: var=flist_d
+
+    - name: Create Quobyte Data devices
+      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
+      with_items:
+        - "{{ flist_d }}"
+      register: _create_data_devices
+      async: 1200
+      poll: 0
       tags: devices
 
+    - name: Wait for creation to finish
+      async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: _jobs3
+      until: _jobs3.finished
+      delay: 5
+      retries: 1000
+      with_items: "{{ _create_data_devices.results }}"
+      tags: devices
+    
 - hosts: cluster[0]
   any_errors_fatal: false
   vars_files:
