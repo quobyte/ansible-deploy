@@ -205,6 +205,19 @@
         enabled: yes
       tags: tune
 
+- hosts: dataserver
+  any_errors_fatal: false
+  vars_files:
+    - vars/quobyte.yaml
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Add additional Quobyte dataservice nodes
+      ignore_errors: yes
+      shell:
+        cmd: ~/install_quobyte add --services data --registry-endpoints {{ registry }}
+      tags: add_datanodes
+
     - name: Create a list of all devices
       shell:
         cmd: lsblk -dn -o NAME,TYPE |grep disk |awk '{print $1}'
@@ -255,24 +268,12 @@
 
     - set_fact: f_quobyte_labeled={{ _quobyte_labeled.stdout_lines }}
       tags: devices
+
     - name: Check number of devices
       shell:
         cmd: lsblk -o name,label |grep quobyte-dev |awk '{print $1}'
       register: _number_devices
       tags: devices
-
-- hosts: dataserver
-  any_errors_fatal: false
-  vars_files:
-    - vars/quobyte.yaml
-  become: yes
-  gather_facts: no
-  tasks:
-    - name: Add additional Quobyte dataservice nodes
-      ignore_errors: yes
-      shell:
-        cmd: ~/install_quobyte add --services data --registry-endpoints {{ registry }}
-      tags: add_datanodes
 
     - set_fact:
         flist_d: "{{ flist_empty }}"
@@ -280,7 +281,13 @@
 
     - debug: var=flist_d
 
-    - name: Create Quobyte additional Data devices
+    - name: Wait for automounted data devices
+      wait_for: 
+        shell: grep /var/lib/quobyte/mnt/inspector-{{ item }} /proc/mounts
+        with_items:
+          - "{{ flist_d }}"
+
+    - name: Create Quobyte additional data devices
       shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
       with_items:
         - "{{ flist_d }}"
