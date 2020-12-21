@@ -1,5 +1,5 @@
 ---
-- hosts: coreserver
+- hosts: cluster
   any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
