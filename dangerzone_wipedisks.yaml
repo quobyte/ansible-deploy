@@ -1,0 +1,7 @@
+---
+- hosts: cluster
+  become: yes
+  tasks:
+
+    - name: wipe all disks. Dangerzone! 
+      shell: wipefs -a /dev/sdb; wipefs -a /dev/sdc 
