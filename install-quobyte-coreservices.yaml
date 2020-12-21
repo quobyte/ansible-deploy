@@ -350,6 +350,13 @@
 
     - debug: var=flist_m
 
+    - name: Wait for automounted metadata devices
+      wait_for:
+        path: /proc/mounts
+        search_regex: /var/lib/quobyte/mnt/inspector-{{ item }}
+      with_items:
+        - "{{ flist_m }}"
+
     - name: Create metadata disk
       shell: qmkdev -t M /var/lib/quobyte/mnt/inspector-{{ item }}
       with_items:
@@ -361,6 +368,13 @@
       tags: devices
 
     - debug: var=flist_d
+
+    - name: Wait for automounted data devices
+      wait_for:
+        path: /proc/mounts
+        search_regex: /var/lib/quobyte/mnt/inspector-{{ item }}
+      with_items:
+        - "{{ flist_d }}"
 
     - name: Create Quobyte Data devices
       shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
