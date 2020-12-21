@@ -489,7 +489,7 @@
       shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
       with_items:
         - "{{ flist_d }}"
-      register: _create_data_devices
+      register: _create_additional_data_devices
       async: 1200
       poll: 0
       tags: devices
@@ -501,7 +501,7 @@
       until: _jobs3.finished
       delay: 5
       retries: 1000
-      with_items: "{{ _create_data_devices.results }}"
+      with_items: "{{ _create_additional_data_devices.results }}"
       tags: devices
     
 - hosts: cluster[0]
