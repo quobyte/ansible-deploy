@@ -1,5 +1,5 @@
 ---
-- hosts: all
+- hosts: coreserver
   any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
@@ -465,45 +465,7 @@
         enabled: yes
       tags: services
 
-- hosts: dataserver
-  any_errors_fatal: false
-  vars_files:
-    - vars/quobyte.yaml
-  become: yes
-  gather_facts: no
-  tasks:
-    - name: Add additional Quobyte dataservice nodes
-      ignore_errors: yes
-      shell:
-        cmd: ~/install_quobyte add --services data --registry-endpoints {{ registry }}
-      tags: add_datanodes
-
-
-    - set_fact:
-        flist_d: "{{ flist_empty }}"
-      tags: devices
-
-    - debug: var=flist_d
-
-    - name: Create Quobyte Data devices
-      shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
-      with_items:
-        - "{{ flist_d }}"
-      register: _create_additional_data_devices
-      async: 1200
-      poll: 0
-      tags: devices
-
-    - name: Wait for creation to finish
-      async_status:
-        jid: "{{ item.ansible_job_id }}"
-      register: _jobs3
-      until: _jobs3.finished
-      delay: 5
-      retries: 1000
-      with_items: "{{ _create_additional_data_devices.results }}"
-      tags: devices
-    
+   
 - hosts: cluster[0]
   any_errors_fatal: false
   vars_files:
