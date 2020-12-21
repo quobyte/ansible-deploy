@@ -282,10 +282,11 @@
     - debug: var=flist_d
 
     - name: Wait for automounted data devices
-      wait_for: 
-        shell: grep /var/lib/quobyte/mnt/inspector-{{ item }} /proc/mounts
-        with_items:
-          - "{{ flist_d }}"
+      wait_for:
+        path: /proc/mounts
+        search_regex: /var/lib/quobyte/mnt/inspector-{{ item }}
+      with_items:
+        - "{{ flist_d }}"
 
     - name: Create Quobyte additional data devices
       shell: qmkdev -t D /var/lib/quobyte/mnt/inspector-{{ item }}
