@@ -216,6 +216,12 @@
         cmd: tuned-adm profile quobyte-server-performance
       tags: tune
 
+    - name: Restart tuned
+      service:
+        name: tuned
+        state: restarted
+        enabled: yes
+      tags: tune
 
 - hosts: dataserver
   any_errors_fatal: false
