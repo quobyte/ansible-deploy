@@ -276,7 +276,7 @@
         cmd: ~/install_quobyte bootstrap --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
       tags: bootstrap
 
-- hosts: cluster[1:2],!cluster[0]
+- hosts: cluster[1:{{ clustersize }}],!cluster[0]
   any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
@@ -290,7 +290,7 @@
         cmd: ~/install_quobyte add --services registry,data,metadata,api,webconsole --registry-endpoints {{ registry }}
       tags: add_regnodes
 
-- hosts: cluster,!cluster[0:2]
+- hosts: cluster,!cluster[0:{{ clustersize }}]
   any_errors_fatal: false
   vars_files:
     - vars/quobyte.yaml
