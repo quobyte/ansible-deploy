@@ -205,6 +205,18 @@
         enabled: yes
       tags: tune
 
+    - name: Copy updated Quobyte tuned config
+      copy:
+         src: templates/tuned.conf
+         dest: /usr/lib/tuned/quobyte-server-performance/
+      tags: tune
+
+    - name: Set Quobyte tuned server profile
+      shell:
+        cmd: tuned-adm profile quobyte-server-performance
+      tags: tune
+
+
 - hosts: dataserver
   any_errors_fatal: false
   vars_files:
