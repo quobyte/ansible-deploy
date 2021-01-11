@@ -52,6 +52,7 @@
         - netdata
         - irqbalance
         - xfsprogs
+        - ntpstat
       when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
       tags: packages
 
